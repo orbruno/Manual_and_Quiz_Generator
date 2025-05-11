@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+openai 
+PyPDF2 #to read pdf files 
+tiktoken #to count tokens

@@ -1,0 +1,25 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: doc-quiz-backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: doc-quiz-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    environment:
+      # ensure tailwind/Vite know where the backend lives
+      - VITE_API_BASE_URL=http://localhost:8000
+    restart: unless-stopped

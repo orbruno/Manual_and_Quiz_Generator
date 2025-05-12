@@ -3,5 +3,6 @@ uvicorn[standard]
 python-multipart
 pydantic
 openai 
+PyYAML #to parse yaml files
 PyPDF2 #to read pdf files 
 tiktoken #to count tokens

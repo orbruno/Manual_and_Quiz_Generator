@@ -1,8 +1,14 @@
 import os
 import re
 import json
+import yaml
 from typing import List, Dict
 from openai import OpenAI, OpenAIError
+
+# load prompts.yml once at import time
+BASE_DIR = os.path.dirname(os.path.dirname(__file__))  # backend/app → backend
+with open(os.path.join(BASE_DIR, "prompts.yml"), "r", encoding="utf-8") as f:
+    _PROMPTS = yaml.safe_load(f)
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
 
@@ -15,14 +21,7 @@ def summarize_and_structure(texts: List[str], prompt: str) -> str:
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {
-                  "role": "system",
-                  "content": (
-                     "You’re a helpful assistant that writes training manuals. "
-                    "Return **only** an HTML fragment—**no** DOCTYPE, `<html>`, `<head>`, `<meta>`, or `<body>` tags—starting directly with an `<h3>` for the chapter title. "
-                    "Include a table of contents and use only `<h3>`, `<h4>`, and `<h5>` elements with class attributes suitable for a web app."
-                  )
-                },
+                {"role": "system", "content": _PROMPTS["manual"]["system"]},
                 {"role": "user", "content": prompt + "\n\n" + combined},
             ],
             temperature=0.2,
@@ -35,12 +34,8 @@ def generate_quiz_from_manual(manual: str) -> List[Dict]:
     # 1) build prompt
     snippet = manual[:MAX_CHARS]
     quiz_prompt = (
-        "You’re an assistant that produces quiz questions in strict JSON. "
-        "Given the following training manual, generate at least 5 questions. "
-        "Each question object must have:\n"
-        "  • question: string\n"
-        "  • answers: string[]\n"
-        "  • correctAnswer: number[]  // indices of correct answers\n\n"
+        _PROMPTS["quiz"]["user"]
+         + "\n\n"
         + snippet
     )
 
@@ -49,7 +44,7 @@ def generate_quiz_from_manual(manual: str) -> List[Dict]:
         resp = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "Return only a JSON array of quiz questions."},
+                {"role": "system", "content": _PROMPTS["quiz"]["system"]},
                 {"role": "user",   "content": quiz_prompt},
             ],
             temperature=0.2,
@@ -68,7 +63,7 @@ def generate_quiz_from_manual(manual: str) -> List[Dict]:
         raw.startswith('"') and raw.endswith('"')
     ):
         raw = raw[1:-1].strip()
-        print("🔍 stripped outer quotes, now:", repr(raw))
+        print("stripped outer quotes, now:", repr(raw))
 
     # 4) strip triple-backtick fences, with optional language tag
     m = re.match(r"^```[^\n]*\n([\s\S]*)\n```$", raw)
